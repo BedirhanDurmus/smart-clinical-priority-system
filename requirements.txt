@@ -1,0 +1,9 @@
+pandas
+numpy
+scikit-learn
+streamlit>=1.33.0
+matplotlib
+seaborn
+xgboost
+shap
+jupyter
