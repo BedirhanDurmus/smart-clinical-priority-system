@@ -61,6 +61,62 @@ def _predict_row(model, row: pd.Series) -> int:
     return int(res["predicted_ktas"])
 
 
+def _verdict_tag(assigned: int, expected: int) -> tuple[str, str, str]:
+    if assigned == expected:
+        return ("NORMAL TRIAGE", "#16a34a", "Correct")
+    if assigned < expected:
+        return ("OVERTRIAGE", "#ea580c", "Incorrect")
+    return ("UNDERTRIAGE", "#dc2626", "Incorrect")
+
+
+def _render_static_case_panel(expected: int, nurse: int, expert: int, ai: int) -> None:
+    n_title, n_color, n_sub = _verdict_tag(nurse, expected)
+    e_title, e_color, e_sub = _verdict_tag(expert, expected)
+    ai_title, ai_color, ai_sub = _verdict_tag(ai, expected)
+
+    st.markdown(
+        f"""
+<div style="border:1px solid #dbe2ea;border-radius:14px;background:#ffffff;padding:16px 18px;">
+  <div style="font-size:0.88rem;color:#64748b;margin-bottom:6px;">Expected level (model)</div>
+  <div style="font-size:2rem;font-weight:800;color:#0f172a;margin-bottom:10px;">KTAS {expected}</div>
+
+  <div style="display:grid;grid-template-columns:1fr;gap:12px;">
+    <div style="border:1px solid #f1f5f9;border-left:5px solid {n_color};border-radius:10px;overflow:hidden;">
+      <div style="padding:10px 12px;background:#fff7ed;color:#0f172a;font-weight:700;">👩‍⚕️ Nurse triage</div>
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
+        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {nurse}</div></div>
+        <div style="align-self:center;color:#64748b;">→</div>
+        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
+      </div>
+      <div style="padding:8px 12px;background:{n_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{n_title} · {n_sub}</div>
+    </div>
+
+    <div style="border:1px solid #f1f5f9;border-left:5px solid {ai_color};border-radius:10px;overflow:hidden;">
+      <div style="padding:10px 12px;background:#f0fdf4;color:#0f172a;font-weight:700;">🧠 AI prediction</div>
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
+        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {ai}</div></div>
+        <div style="align-self:center;color:#64748b;">→</div>
+        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
+      </div>
+      <div style="padding:8px 12px;background:{ai_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{ai_title} · {ai_sub}</div>
+    </div>
+
+    <div style="border:1px solid #f1f5f9;border-left:5px solid {e_color};border-radius:10px;overflow:hidden;">
+      <div style="padding:10px 12px;background:#f8fafc;color:#0f172a;font-weight:700;">🩺 Expert assessment (reference)</div>
+      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
+        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expert}</div></div>
+        <div style="align-self:center;color:#64748b;">→</div>
+        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
+      </div>
+      <div style="padding:8px 12px;background:{e_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{e_title} · {e_sub}</div>
+    </div>
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+
 @st.cache_data(show_spinner=False)
 def _analysis_cache():
     df = load_raw()
@@ -193,6 +249,22 @@ st.markdown(
 )
 
 st.markdown("---")
+st.header("4.1) Model Performance Note (Accuracy ≈ 0.96)")
+st.markdown(
+    """
+The notebook reports an accuracy around **0.96** under its evaluation setup.  
+Interpretation:
+- This means approximately 96% label-level agreement in that specific validation context.
+- This value can be optimistic when feature sets include strong post-triage/contextual signals.
+- Therefore, operational reporting should separate:
+  1) **model evaluation metrics** (e.g., hold-out/CV accuracy), and  
+  2) **deployment-facing agreement metrics** (Nurse–Expert vs AI–Expert on real workflow data).
+
+In short, **0.96 is a model-evaluation statistic, not a guarantee of universal real-world accuracy**.
+"""
+)
+
+st.markdown("---")
 st.header("5) Real-Case Illustration: Nurse vs AI")
 work, sample, metrics, _ = _analysis_cache()
 
@@ -260,17 +332,7 @@ Under the expert-as-reference assumption, the primary value proposition is **err
         ai = _safe_int(sample.get("ai_ktas"), -1)
 
         st.markdown("#### Static prediction-style result panel (non-interactive)")
-        st.markdown(
-            f"""
-<div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#f8fafc;">
-  <div style="font-weight:700;margin-bottom:8px;">Case outcome snapshot</div>
-  <div>🏥 <strong>Nurse KTAS:</strong> {nurse}</div>
-  <div>🧠 <strong>AI KTAS:</strong> {ai}</div>
-  <div>🩺 <strong>Expert KTAS (reference):</strong> {expert}</div>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+        _render_static_case_panel(expected=expert, nurse=nurse, expert=expert, ai=ai)
 
         if nurse != expert and ai == expert:
             st.success(
