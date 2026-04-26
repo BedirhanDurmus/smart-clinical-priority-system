@@ -1,10 +1,4 @@
-"""
-Project presentation page:
-- What was done in the notebook
-- Why each feature exists
-- How the app works
-- A concrete patient example (nurse vs AI vs expert)
-"""
+"""Academic presentation page for the ED triage AI project."""
 
 from __future__ import annotations
 
@@ -108,153 +102,160 @@ def _analysis_cache():
 
 
 st.title("🧭 Project Presentation — ED Triage AI")
-st.caption("Notebook'ta yapılan tüm sürecin sade anlatımı + uygulamanın gerçek kullanım değeri")
+st.caption("Methodology, model development, and operational implications")
 
 st.markdown(
     """
-Bu sayfa, projeyi hiç bilmeyen birinin bile anlayacağı şekilde şu soruları yanıtlar:
-- Veri neydi, nasıl temizlendi?
-- Feature engineering neden yapıldı?
-- Model nasıl eğitildi ve nasıl ölçüldü?
-- Uygulama sahada nasıl kullanılacak?
-- Hemşire hatasını azaltma açısından pratik katkı ne olabilir?
+This page consolidates the full analytical workflow:
+- dataset loading and preprocessing choices,
+- exploratory analysis and feature engineering strategy,
+- model training and validation protocol,
+- deployment behavior in the Streamlit interface,
+- retrospective estimate of potential triage-error mitigation.
 """
 )
 
 st.markdown("---")
-st.header("1) Problem ve business logic")
+st.header("1) Problem Definition and Operational Logic")
 st.markdown(
     """
-**İş problemi:** Acil serviste triyaj seviyesi hatalı verildiğinde:
-- **Overtriage (gereğinden daha acil):** kaynak israfı ve akış bozulması,
-- **Undertriage (gereğinden az acil):** hasta güvenliği riski oluşur.
+**Clinical-operational problem.** Triage misclassification in emergency departments has two principal error modes:
+- **Overtriage:** urgency inflation, typically associated with avoidable resource consumption.
+- **Undertriage:** urgency deflation, associated with elevated patient-safety risk.
 
-**Business logic:**  
-Model, hasta girişindeki klinik verilerden **referans KTAS** önerir.  
-Sistem, hemşire KTAS ile modeli karşılaştırarak **erken ikinci görüş** sağlar.
+**Operational logic.**  
+Given first-contact clinical variables, the model outputs a **reference KTAS level**.  
+Nurse and physician labels can then be compared to this reference for structured discordance analysis.
 """
 )
 
 st.markdown("---")
-st.header("2) Notebook'ta ne yapıldı? (uçtan uca)")
+st.header("2) Notebook Pipeline (End-to-End)")
 st.markdown(
     """
-### A. Veri hazırlama
-1. `data/data.csv` yüklendi (`;` ayırıcı, ondalık düzeltmeleri).  
-2. Eksik/bozuk değerler (`??`, bozuk `NRS_pain`) temizlendi.  
-3. Kategorik alanlar normalize edildi (Sex, Injury, Mental, Arrival mode vb.).
+### A. Data preparation
+1. Loaded `data/data.csv` with delimiter and decimal normalization.  
+2. Cleaned missing/invalid tokens (`??`, malformed `NRS_pain`).  
+3. Standardized categorical fields (Sex, Injury, Mental status, Arrival mode, etc.).
 
-### B. Keşifsel analiz (EDA)
-1. KTAS dağılımı (hemşire vs uzman),  
-2. mistriage dağılımı (normal/over/under),  
-3. yaş, vitaller, kalış süresi ve yoğunluk dağılımları.
+### B. Exploratory analysis
+1. KTAS distributions (nurse vs expert),  
+2. mistriage distributions (normal/over/under),  
+3. age, vitals, length-of-stay, and workload distributions.
 
 ### C. Feature engineering
-1. Chief complaint metni normalize edilip kategoriye çevrildi.  
-2. Vitals + demografi + operasyonel alanlardan model girdileri kuruldu.  
-3. Gerekli encoding/ölçekleme yapıldı.
+1. Normalized chief-complaint text and mapped it to categories.  
+2. Constructed model inputs from vitals, demographics, and operational context.  
+3. Applied encoding/scaling in a reproducible preprocessing pipeline.
 
-### D. Modelleme
-1. Çok sınıflı sınıflandırma ile KTAS tahmini eğitildi,  
-2. Hold-out test/CV ile performans kontrol edildi,  
-3. En iyi pipeline `models/best_model.joblib` olarak kaydedildi.
+### D. Modeling
+1. Trained a multiclass classifier for KTAS estimation,  
+2. evaluated with hold-out testing and cross-validation,  
+3. persisted the selected artifact as `models/best_model.joblib`.
 
-### E. Ürünleştirme
-1. Streamlit app ile form tabanlı tahmin ekranı,  
-2. Data Visualization sayfası ile veri hikayesi,  
-3. Bu Presentation sayfası ile teknik + iş anlatımı.
+### E. Productization
+1. Deployed an interactive Streamlit inference interface,  
+2. added a dedicated visualization page for dataset diagnostics,  
+3. added this presentation page for technical and stakeholder communication.
 """
 )
 
 st.markdown("---")
-st.header("3) Neden bu değişkenler var? (hiç bilmeyen için)")
+st.header("3) Feature Rationale")
 feature_df = pd.DataFrame(
     [
-        ("Yaş, cinsiyet", "Temel risk profili ve popülasyon farkları"),
-        ("Geliş şekli (ambulans/yürüme)", "Vaka ciddiyetinin dolaylı göstergesi"),
-        ("Mental durum", "Acil ciddiyeti için güçlü klinik sinyal"),
-        ("Ağrı + NRS", "Semptom şiddeti"),
-        ("SBP/DBP/HR/RR/BT/SpO2", "Hayati bulgular; triyajın çekirdeği"),
-        ("Saatlik hasta sayısı", "Yoğunluk/operasyonel baskı etkisi"),
-        ("Chief complaint", "Semptom bağlamı (ör. chest pain vs minor wound)"),
-        ("Nurse vs Expert KTAS", "Hata analizi ve kalite ölçümü"),
+        ("Age, Sex", "Baseline risk profile and cohort heterogeneity"),
+        ("Arrival mode", "Proxy indicator of acute severity at presentation"),
+        ("Mental status", "Strong urgency-related clinical signal"),
+        ("Pain + NRS", "Quantified symptom intensity"),
+        ("SBP/DBP/HR/RR/BT/SpO2", "Core physiological state descriptors"),
+        ("Patients per hour", "Operational congestion context"),
+        ("Chief complaint", "Clinical context signal derived from intake text"),
+        ("Nurse vs Expert KTAS", "Endpoint for discordance and quality analysis"),
     ],
-    columns=["Alan", "Neden kullanılır?"],
+    columns=["Variable block", "Rationale"],
 )
 st.dataframe(feature_df, use_container_width=True, hide_index=True)
 
 st.markdown("---")
-st.header("4) Uygulama nasıl kullanılır?")
+st.header("4) Application Workflow")
 st.markdown(
     """
-1. **App** sayfasında hasta formunu doldur.  
-2. **Run analysis** ile AI'nin önerdiği KTAS seviyesini al.  
-3. Hemşire ve doktor KTAS seviyelerini girince sistem:
-   - hemşireyi modele göre karşılaştırır (doğru / over / under),
-   - doktoru modele göre karşılaştırır.
-4. Sonuçlar karar vericiye “erken uyarı” sağlar; son karar yine klinisyendedir.
+1. Populate the patient intake form in the **App** page.  
+2. Execute **Run analysis** to obtain the model-estimated KTAS reference.  
+3. Enter nurse and physician KTAS levels to evaluate directional concordance versus model output.  
+4. Use results as decision support; final authority remains with clinical staff.
 """
 )
 
 st.markdown("---")
-st.header("5) Gerçek vaka örneği: hemşire vs AI")
+st.header("5) Real-Case Illustration: Nurse vs AI")
 work, sample, metrics, _ = _analysis_cache()
 
 if metrics is None:
-    st.warning("Model dosyası bulunamadı (`models/best_model.joblib`). Bu bölüm için önce modeli eğitmelisiniz.")
+    st.warning(
+        "Model artifact not found (`models/best_model.joblib`). "
+        "Train the model to enable this section."
+    )
 else:
     c1, c2, c3 = st.columns(3)
-    c1.metric("Kayıt sayısı", f"{metrics['n']}")
-    c2.metric("Hemşire-Uzman uyumu", f"{metrics['nurse_agreement']*100:.1f}%")
-    c3.metric("AI-Uzman uyumu", f"{metrics['ai_agreement']*100:.1f}%")
+    c1.metric("Analyzed records", f"{metrics['n']}")
+    c2.metric("Nurse–Expert agreement", f"{metrics['nurse_agreement']*100:.1f}%")
+    c3.metric("AI–Expert agreement", f"{metrics['ai_agreement']*100:.1f}%")
 
     st.markdown(
         f"""
-**Potansiyel etki (dataset içi retrospektif):**
-- Hemşirenin uzmanla uyuşmadığı vaka: **{metrics['nurse_errors']}**
-- Bu hataların içinde AI'nin uzmanı tuttuğu vaka: **{metrics['potentially_corrected']}**
-- Potansiyel yakalama oranı: **{metrics['potentially_corrected_ratio']*100:.1f}%**
+**Retrospective impact estimate (dataset-internal):**
+- Nurse–expert discordant cases: **{metrics['nurse_errors']}**
+- Discordant cases where AI matches expert: **{metrics['potentially_corrected']}**
+- Potential capture ratio: **{metrics['potentially_corrected_ratio']*100:.1f}%**
 """
     )
 
-    st.subheader("Örnek kişi")
-    ex = {
-        "Chief complaint": sample.get("Chief_complain"),
-        "Age": int(sample.get("Age")),
-        "Mental": int(sample.get("Mental")),
-        "Pain": int(sample.get("Pain")),
-        "SBP/DBP": f"{sample.get('SBP')}/{sample.get('DBP')}",
-        "HR": sample.get("HR"),
-        "RR": sample.get("RR"),
-        "SpO2": sample.get("Saturation"),
-        "Hemşire KTAS": int(sample.get("KTAS_RN_num")),
-        "Uzman KTAS": int(sample.get("KTAS_expert_num")),
-        "AI KTAS": int(sample.get("ai_ktas")),
-    }
-    st.json(ex)
-
-    nurse = int(sample.get("KTAS_RN_num"))
-    expert = int(sample.get("KTAS_expert_num"))
-    ai = int(sample.get("ai_ktas"))
-
-    if nurse != expert and ai == expert:
-        st.success(
-            "Bu örnekte hemşire seviyesi uzmanla uyuşmuyor; AI ise uzman seviyesini tutturuyor. "
-            "Yani sistem, bu vakada olası triyaj hatasını erken yakalamaya yardımcı olabilirdi."
-        )
-    elif nurse == expert:
-        st.info("Bu örnekte hemşire zaten doğru seviyeyi vermiş (uzmanla uyumlu).")
+    st.subheader("Representative case profile")
+    if sample is None or getattr(sample, "empty", False):
+        st.info("No representative case could be generated from the current data subset.")
     else:
-        st.warning("Bu örnekte AI de uzmanı tutturamamış. Bu da modelin sınırlılıklarını gösterir.")
+        ex = {
+            "Chief complaint": str(sample.get("Chief_complain", "N/A")),
+            "Age": _safe_int(sample.get("Age"), -1),
+            "Mental status code": _safe_int(sample.get("Mental"), -1),
+            "Pain code": _safe_int(sample.get("Pain"), -1),
+            "SBP/DBP": f"{sample.get('SBP', 'N/A')}/{sample.get('DBP', 'N/A')}",
+            "HR": sample.get("HR", "N/A"),
+            "RR": sample.get("RR", "N/A"),
+            "SpO2": sample.get("Saturation", "N/A"),
+            "Nurse KTAS": _safe_int(sample.get("KTAS_RN_num"), -1),
+            "Expert KTAS": _safe_int(sample.get("KTAS_expert_num"), -1),
+            "AI KTAS": _safe_int(sample.get("ai_ktas"), -1),
+        }
+        st.json(ex)
+
+        nurse = _safe_int(sample.get("KTAS_RN_num"), -1)
+        expert = _safe_int(sample.get("KTAS_expert_num"), -1)
+        ai = _safe_int(sample.get("ai_ktas"), -1)
+
+        if nurse != expert and ai == expert:
+            st.success(
+                "In this case, nurse assignment is discordant with expert labeling, "
+                "whereas AI aligns with expert KTAS. This illustrates potential early error interception."
+            )
+        elif nurse == expert:
+            st.info("In this case, nurse assignment is already concordant with expert KTAS.")
+        else:
+            st.warning(
+                "In this case, AI is also discordant with expert KTAS. "
+                "This is consistent with expected model limitations."
+            )
 
 st.markdown("---")
-st.header("6) Sınırlılıklar ve doğru kullanım")
+st.header("6) Limitations and Appropriate Use")
 st.markdown(
     """
-- Bu sistem **karar destek** içindir, **karar verici değildir**.  
-- Model dataset'teki örüntüleri öğrenir; yeni dağılımlarda performans düşebilir.  
-- Klinik bağlam, muayene ve hekim kararı her zaman önceliklidir.  
-- Düzenli izleme, yeniden eğitim ve kalite metrikleri gerekir.
+- This system is a **decision-support** layer, not an autonomous decision maker.  
+- Performance is distribution-dependent; out-of-distribution behavior must be monitored.  
+- Clinical examination and physician judgment remain the definitive standard.  
+- Continuous monitoring, periodic recalibration, and governance metrics are required.
 """
 )
 
