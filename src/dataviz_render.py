@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import matplotlib.pyplot as plt
 import streamlit as st
 
@@ -25,8 +26,13 @@ def _load_viz_df():
     return prepare_viz_df()
 
 
-def _render_code_card(title: str, code: str, explanation: str) -> None:
-    """Show reproducible code + explanation under each chart."""
+def _render_code_card(
+    title: str,
+    explanation: str,
+    call_code: str,
+    fn_obj,
+) -> None:
+    """Show chart call + full function body under each chart."""
     st.markdown(
         f"""
 <div style="
@@ -43,7 +49,18 @@ def _render_code_card(title: str, code: str, explanation: str) -> None:
 """,
         unsafe_allow_html=True,
     )
-    st.code(code, language="python")
+    try:
+        fn_source = inspect.getsource(fn_obj)
+    except Exception:
+        fn_source = "# Function source could not be loaded in this environment."
+
+    full_code = (
+        "# Chart call in this page\n"
+        f"{call_code}\n\n"
+        "# Function internals (from src/viz_charts.py)\n"
+        f"{fn_source}"
+    )
+    st.code(full_code, language="python")
 
 
 def render_data_visualization() -> None:
@@ -69,12 +86,13 @@ def render_data_visualization() -> None:
     st.pyplot(fig0)
     plt.close(fig0)
     _render_code_card(
-        "Summary statistics grafiği kodu",
-        """fig0 = fig_summary_metrics(df)
+        title="Summary statistics grafiği kodu",
+        explanation="Bu blok özet metriği (vaka sayısı, eksik veri oranı, hemşire-doktor KTAS uyumu) "
+        "tek bir figürde üretir ve Streamlit'e basar.",
+        call_code="""fig0 = fig_summary_metrics(df)
 st.pyplot(fig0)
 plt.close(fig0)""",
-        "Bu blok özet metriği (vaka sayısı, eksik veri oranı, hemşire-doktor KTAS uyumu) "
-        "tek bir figürde üretir ve Streamlit'e basar.",
+        fn_obj=fig_summary_metrics,
     )
 
     st.markdown("---")
@@ -88,12 +106,13 @@ plt.close(fig0)""",
     st.pyplot(fig1)
     plt.close(fig1)
     _render_code_card(
-        "KTAS dağılımı (hemşire vs doktor) kodu",
-        """fig1 = fig_ktas_side_by_side(df)
+        title="KTAS dağılımı (hemşire vs doktor) kodu",
+        explanation="Hemşire ve doktor KTAS seviyelerini yan yana gösterir. "
+        "Sınıf dengesizliği ve dağılım farklarını hızlı görürsünüz.",
+        call_code="""fig1 = fig_ktas_side_by_side(df)
 st.pyplot(fig1)
 plt.close(fig1)""",
-        "Hemşire ve doktor KTAS seviyelerini yan yana gösterir. "
-        "Sınıf dengesizliği ve dağılım farklarını hızlı görürsünüz.",
+        fn_obj=fig_ktas_side_by_side,
     )
 
     st.markdown("---")
@@ -107,12 +126,13 @@ plt.close(fig1)""",
     st.pyplot(fig2)
     plt.close(fig2)
     _render_code_card(
-        "Mistriage bar grafiği kodu",
-        """fig2 = fig_mistriage_bar(df)
+        title="Mistriage bar grafiği kodu",
+        explanation="Normal / over / under triage sınıflarının frekanslarını üretir; "
+        "hata tipi profilini görmenizi sağlar.",
+        call_code="""fig2 = fig_mistriage_bar(df)
 st.pyplot(fig2)
 plt.close(fig2)""",
-        "Normal / over / under triage sınıflarının frekanslarını üretir; "
-        "hata tipi profilini görmenizi sağlar.",
+        fn_obj=fig_mistriage_bar,
     )
 
     st.markdown("---")
@@ -126,11 +146,12 @@ plt.close(fig2)""",
     st.pyplot(fig3)
     plt.close(fig3)
     _render_code_card(
-        "Hemşire × doktor heatmap kodu",
-        """fig3 = fig_rn_expert_heatmap(df)
+        title="Hemşire × doktor heatmap kodu",
+        explanation="Satırda hemşire, sütunda doktor KTAS olacak şekilde kesişim tablosunu ısı haritası olarak çizer.",
+        call_code="""fig3 = fig_rn_expert_heatmap(df)
 st.pyplot(fig3)
 plt.close(fig3)""",
-        "Satırda hemşire, sütunda doktor KTAS olacak şekilde kesişim tablosunu ısı haritası olarak çizer.",
+        fn_obj=fig_rn_expert_heatmap,
     )
 
     st.markdown("---")
@@ -143,11 +164,12 @@ plt.close(fig3)""",
     st.pyplot(fig4)
     plt.close(fig4)
     _render_code_card(
-        "Yaş dağılımı kodu",
-        """fig4 = fig_age_distribution(df)
+        title="Yaş dağılımı kodu",
+        explanation="Yaş histogramını ve medyan referansını çizer; örneklemin demografik yapısını okumanızı sağlar.",
+        call_code="""fig4 = fig_age_distribution(df)
 st.pyplot(fig4)
 plt.close(fig4)""",
-        "Yaş histogramını ve medyan referansını çizer; örneklemin demografik yapısını okumanızı sağlar.",
+        fn_obj=fig_age_distribution,
     )
 
     st.markdown("---")
@@ -160,11 +182,12 @@ plt.close(fig4)""",
     st.pyplot(fig5)
     plt.close(fig5)
     _render_code_card(
-        "Cinsiyet / hastane grubu kodu",
-        """fig5 = fig_sex_group(df)
+        title="Cinsiyet / hastane grubu kodu",
+        explanation="Cinsiyet ve hastane tipi (local/regional ED) dağılımlarını karşılaştırmalı verir.",
+        call_code="""fig5 = fig_sex_group(df)
 st.pyplot(fig5)
 plt.close(fig5)""",
-        "Cinsiyet ve hastane tipi (local/regional ED) dağılımlarını karşılaştırmalı verir.",
+        fn_obj=fig_sex_group,
     )
 
     st.markdown("---")
@@ -178,11 +201,12 @@ plt.close(fig5)""",
     st.pyplot(fig6)
     plt.close(fig6)
     _render_code_card(
-        "Acilde kalış süresi dağılımı kodu",
-        """fig6 = fig_length_of_stay(df)
+        title="Acilde kalış süresi dağılımı kodu",
+        explanation="Uzun kuyruk etkisini azaltmak için log-dönüşümlü kalış süresi histogramı üretir.",
+        call_code="""fig6 = fig_length_of_stay(df)
 st.pyplot(fig6)
 plt.close(fig6)""",
-        "Uzun kuyruk etkisini azaltmak için log-dönüşümlü kalış süresi histogramı üretir.",
+        fn_obj=fig_length_of_stay,
     )
 
     st.markdown("---")
@@ -195,11 +219,12 @@ plt.close(fig6)""",
     st.pyplot(fig7)
     plt.close(fig7)
     _render_code_card(
-        "Saatlik hasta yükü kodu",
-        """fig7 = fig_patients_per_hour(df)
+        title="Saatlik hasta yükü kodu",
+        explanation="Saat başına hasta sayısının dağılımını gösterir; yoğun saatleri yorumlamaya yardımcı olur.",
+        call_code="""fig7 = fig_patients_per_hour(df)
 st.pyplot(fig7)
 plt.close(fig7)""",
-        "Saat başına hasta sayısının dağılımını gösterir; yoğun saatleri yorumlamaya yardımcı olur.",
+        fn_obj=fig_patients_per_hour,
     )
 
     st.markdown("---")
@@ -213,11 +238,12 @@ plt.close(fig7)""",
     st.pyplot(fig8)
     plt.close(fig8)
     _render_code_card(
-        "Vital bulgular vs KTAS kodu",
-        """fig8 = fig_vitals_by_ktas(df)
+        title="Vital bulgular vs KTAS kodu",
+        explanation="Kalp hızı ve sistolik tansiyonun KTAS seviyelerine göre kutu grafikleriyle nasıl ayrıştığını gösterir.",
+        call_code="""fig8 = fig_vitals_by_ktas(df)
 st.pyplot(fig8)
 plt.close(fig8)""",
-        "Kalp hızı ve sistolik tansiyonun KTAS seviyelerine göre kutu grafikleriyle nasıl ayrıştığını gösterir.",
+        fn_obj=fig_vitals_by_ktas,
     )
 
     st.info(
