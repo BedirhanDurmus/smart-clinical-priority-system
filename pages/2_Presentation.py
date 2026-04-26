@@ -123,9 +123,13 @@ st.markdown(
 - **Overtriage:** urgency inflation, typically associated with avoidable resource consumption.
 - **Undertriage:** urgency deflation, associated with elevated patient-safety risk.
 
+**Reference assumption used in this project.**  
+For quality-analysis purposes, **expert KTAS is treated as the reference label**.  
+Accordingly, nurse and AI outputs are evaluated by their agreement with expert assignment.
+
 **Operational logic.**  
-Given first-contact clinical variables, the model outputs a **reference KTAS level**.  
-Nurse and physician labels can then be compared to this reference for structured discordance analysis.
+Given first-contact clinical variables, the model outputs a **reference KTAS estimate**.  
+Nurse and AI labels are then compared against expert labeling to quantify potential error interception.
 """
 )
 
@@ -203,12 +207,32 @@ else:
     c2.metric("Nurse–Expert agreement", f"{metrics['nurse_agreement']*100:.1f}%")
     c3.metric("AI–Expert agreement", f"{metrics['ai_agreement']*100:.1f}%")
 
+    agreement_delta = (metrics["ai_agreement"] - metrics["nurse_agreement"]) * 100
+    if agreement_delta >= 0:
+        st.success(f"AI–Expert agreement is {agreement_delta:.1f} points above Nurse–Expert agreement.")
+    else:
+        st.info(
+            f"AI–Expert agreement is {abs(agreement_delta):.1f} points below Nurse–Expert agreement "
+            "in this artifact; however, AI may still capture a substantial subset of discordant nurse cases."
+        )
+
     st.markdown(
         f"""
 **Retrospective impact estimate (dataset-internal):**
 - Nurse–expert discordant cases: **{metrics['nurse_errors']}**
 - Discordant cases where AI matches expert: **{metrics['potentially_corrected']}**
 - Potential capture ratio: **{metrics['potentially_corrected_ratio']*100:.1f}%**
+"""
+    )
+
+    st.subheader("Why use AI over unaided nurse-only triage?")
+    st.markdown(
+        f"""
+Under the expert-as-reference assumption, the primary value proposition is **error interception**:
+- AI acts as a real-time second reader and can flag a meaningful fraction of nurse–expert discordances.
+- In this dataset, AI aligns with expert in **{metrics['potentially_corrected']} / {metrics['nurse_errors']}**
+  discordant nurse cases (**{metrics['potentially_corrected_ratio']*100:.1f}% potential capture**).
+- Therefore, the proposed deployment model is **AI-assisted triage quality control**, not nurse replacement.
 """
     )
 
@@ -234,6 +258,19 @@ else:
         nurse = _safe_int(sample.get("KTAS_RN_num"), -1)
         expert = _safe_int(sample.get("KTAS_expert_num"), -1)
         ai = _safe_int(sample.get("ai_ktas"), -1)
+
+        st.markdown("#### Static prediction-style result panel (non-interactive)")
+        st.markdown(
+            f"""
+<div style="border:1px solid #e2e8f0;border-radius:12px;padding:14px;background:#f8fafc;">
+  <div style="font-weight:700;margin-bottom:8px;">Case outcome snapshot</div>
+  <div>🏥 <strong>Nurse KTAS:</strong> {nurse}</div>
+  <div>🧠 <strong>AI KTAS:</strong> {ai}</div>
+  <div>🩺 <strong>Expert KTAS (reference):</strong> {expert}</div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
 
         if nurse != expert and ai == expert:
             st.success(
