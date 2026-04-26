@@ -69,51 +69,86 @@ def _verdict_tag(assigned: int, expected: int) -> tuple[str, str, str]:
     return ("UNDERTRIAGE", "#dc2626", "Incorrect")
 
 
+def _verdict_footer_html(title: str, color_hex: str, sub: str) -> str:
+    """Single-line HTML strip; avoids large indented blocks that Markdown may treat as code."""
+    return (
+        f'<p style="margin:0;padding:10px 12px;background:{color_hex};color:#ffffff;'
+        f'font-weight:700;font-size:0.9rem;border-radius:0 0 10px 10px;text-align:center;">'
+        f"{title} · {sub}</p>"
+    )
+
+
+def _render_triage_card(
+    *,
+    label: str,
+    emoji: str,
+    assigned: int,
+    reference: int,
+    header_bg: str,
+    border_left: str,
+) -> None:
+    title, color, sub = _verdict_tag(assigned, reference)
+    with st.container(border=True):
+        st.markdown(
+            f'<div style="padding:8px 10px;margin:-4px -4px 8px -4px;border-radius:8px;'
+            f"background:{header_bg};border-left:4px solid {border_left};"
+            f'font-weight:700;">{emoji} {label}</div>',
+            unsafe_allow_html=True,
+        )
+        c1, c2, c3 = st.columns([2, 0.45, 2])
+        with c1:
+            st.metric("Assigned", f"KTAS {assigned}")
+        with c2:
+            st.markdown(
+                "<div style='text-align:center;padding-top:1.1rem;font-size:1.35rem;color:#64748b;'>→</div>",
+                unsafe_allow_html=True,
+            )
+        with c3:
+            st.metric("Reference (expert)", f"KTAS {reference}")
+        st.markdown(_verdict_footer_html(title, color, sub), unsafe_allow_html=True)
+
+
 def _render_static_case_panel(expected: int, nurse: int, expert: int, ai: int) -> None:
-    n_title, n_color, n_sub = _verdict_tag(nurse, expected)
-    e_title, e_color, e_sub = _verdict_tag(expert, expected)
-    ai_title, ai_color, ai_sub = _verdict_tag(ai, expected)
+    """
+    App-style triage panel using native Streamlit widgets only (reliable in light/dark themes).
+    `expected` is expert KTAS (reference truth for this slide).
+    """
+    st.caption("Expert reference level")
+    st.markdown(f"### KTAS {expected}")
 
-    st.markdown(
-        f"""
-<div style="border:1px solid #dbe2ea;border-radius:14px;background:#ffffff;padding:16px 18px;">
-  <div style="font-size:0.88rem;color:#64748b;margin-bottom:6px;">Expected level (model)</div>
-  <div style="font-size:2rem;font-weight:800;color:#0f172a;margin-bottom:10px;">KTAS {expected}</div>
+    col_n, col_a, col_e = st.columns(3)
+    with col_n:
+        _render_triage_card(
+            label="Nurse triage",
+            emoji="👩‍⚕️",
+            assigned=nurse,
+            reference=expected,
+            header_bg="#fff7ed",
+            border_left="#ea580c",
+        )
+    with col_a:
+        _render_triage_card(
+            label="AI prediction",
+            emoji="🧠",
+            assigned=ai,
+            reference=expected,
+            header_bg="#ecfdf5",
+            border_left="#16a34a",
+        )
+    with col_e:
+        _render_triage_card(
+            label="Expert (reference)",
+            emoji="🩺",
+            assigned=expert,
+            reference=expected,
+            header_bg="#f1f5f9",
+            border_left="#334155",
+        )
 
-  <div style="display:grid;grid-template-columns:1fr;gap:12px;">
-    <div style="border:1px solid #f1f5f9;border-left:5px solid {n_color};border-radius:10px;overflow:hidden;">
-      <div style="padding:10px 12px;background:#fff7ed;color:#0f172a;font-weight:700;">👩‍⚕️ Nurse triage</div>
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
-        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {nurse}</div></div>
-        <div style="align-self:center;color:#64748b;">→</div>
-        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
-      </div>
-      <div style="padding:8px 12px;background:{n_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{n_title} · {n_sub}</div>
-    </div>
-
-    <div style="border:1px solid #f1f5f9;border-left:5px solid {ai_color};border-radius:10px;overflow:hidden;">
-      <div style="padding:10px 12px;background:#f0fdf4;color:#0f172a;font-weight:700;">🧠 AI prediction</div>
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
-        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {ai}</div></div>
-        <div style="align-self:center;color:#64748b;">→</div>
-        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
-      </div>
-      <div style="padding:8px 12px;background:{ai_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{ai_title} · {ai_sub}</div>
-    </div>
-
-    <div style="border:1px solid #f1f5f9;border-left:5px solid {e_color};border-radius:10px;overflow:hidden;">
-      <div style="padding:10px 12px;background:#f8fafc;color:#0f172a;font-weight:700;">🩺 Expert assessment (reference)</div>
-      <div style="display:flex;justify-content:space-between;gap:10px;padding:10px 12px;color:#0f172a;background:#ffffff;">
-        <div><div style="font-size:0.75rem;color:#64748b;">Assigned</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expert}</div></div>
-        <div style="align-self:center;color:#64748b;">→</div>
-        <div><div style="font-size:0.75rem;color:#64748b;">Expected</div><div style="font-size:1.5rem;font-weight:800;">KTAS {expected}</div></div>
-      </div>
-      <div style="padding:8px 12px;background:{e_color};color:#ffffff;font-weight:700;font-size:0.85rem;">{e_title} · {e_sub}</div>
-    </div>
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
+    st.info(
+        "**Notebook validation accuracy ≈ 0.96** denotes strong agreement between predicted and "
+        "held-out labels under the training protocol; it is distinct from nurse–expert agreement "
+        "on the full cohort. The cards above illustrate operational concordance against the expert label."
     )
 
 
