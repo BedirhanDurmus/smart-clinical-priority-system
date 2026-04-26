@@ -24,7 +24,10 @@ from sklearn.metrics import (
     make_scorer,
 )
 from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
+try:
+    from lightgbm import LGBMClassifier
+except Exception:  # pragma: no cover - optional dependency at runtime
+    LGBMClassifier = None
 
 from .preprocess import (
     build_preprocessor,
@@ -65,7 +68,7 @@ def _get_X_y(df: pd.DataFrame):
 
 def build_pipelines(preprocessor) -> dict[str, Pipeline]:
     """Baseline pipelines with regularisation-oriented defaults (reduces overfitting)."""
-    return {
+    pipelines = {
         "LogisticRegression": Pipeline([
             ("pre", preprocessor),
             ("clf", LogisticRegression(
@@ -106,7 +109,9 @@ def build_pipelines(preprocessor) -> dict[str, Pipeline]:
                 n_jobs=-1,
             ))),
         ]),
-        "LightGBM": Pipeline([
+    }
+    if LGBMClassifier is not None:
+        pipelines["LightGBM"] = Pipeline([
             ("pre", preprocessor),
             ("clf", LGBMClassifier(
                 n_estimators=200,
@@ -123,8 +128,8 @@ def build_pipelines(preprocessor) -> dict[str, Pipeline]:
                 n_jobs=-1,
                 verbose=-1,
             )),
-        ]),
-    }
+        ])
+    return pipelines
 
 
 def evaluate_cv(pipeline: Pipeline, X, y, cv=5) -> dict:
@@ -178,6 +183,11 @@ def randomized_search_lightgbm(
     cv: int = 5,
 ) -> RandomizedSearchCV:
     """Tune LightGBM with regularisation-heavy search space (generalisation focus)."""
+    if LGBMClassifier is None:
+        raise ImportError(
+            "lightgbm is not installed. Install it with `pip install lightgbm` "
+            "to run LightGBM search/training."
+        )
     base = LGBMClassifier(
         class_weight="balanced",
         random_state=RANDOM_STATE,
