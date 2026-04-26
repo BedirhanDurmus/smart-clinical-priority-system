@@ -60,7 +60,13 @@ def _render_code_card(
         "# Function internals (from src/viz_charts.py)\n"
         f"{fn_source}"
     )
-    st.code(full_code, language="python")
+    show_code = st.checkbox(
+        "☑ Show/Hide code",
+        value=False,
+        key=f"code_toggle_{title}",
+    )
+    if show_code:
+        st.code(full_code, language="python")
 
 
 def render_data_visualization() -> None:

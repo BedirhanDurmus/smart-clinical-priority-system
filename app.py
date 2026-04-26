@@ -507,30 +507,12 @@ def render_results_footnote() -> str:
 def main():
     st.set_page_config(page_title="ED Triage Decision Support", page_icon="🏥", layout="wide")
 
-    with st.sidebar:
-        st.markdown("### Navigation")
-        _section = st.radio(
-            "Section",
-            ["Triage", "Data visualization"],
-            key="nav_section",
-            label_visibility="collapsed",
-        )
-        st.caption("Charts use `data/data.csv` (no page switch needed).")
-
-    if _section == "Data visualization":
-        from src.dataviz_render import render_data_visualization
-
-        render_data_visualization()
-        return
-
     st.title("🏥 Emergency Department Triage Decision Support")
     st.caption(
         "**Step 1:** Enter patient data → model **KTAS prediction** (reference: expected level per model). "
         "**Step 2:** Enter nurse and physician KTAS → each is **compared to the model reference**."
     )
-    st.caption(
-        "📊 In the sidebar, choose **Data visualization** for charts of the training dataset."
-    )
+    st.caption("📊 For charts, open the **Data Visualization** page from Streamlit's left page menu.")
 
     st.warning(
         "⚠️ **For education and research only.** "
